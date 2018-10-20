@@ -1,0 +1,36 @@
+{
+  "name": "homebridge-bloomsky",
+  "version": "1.0.0",
+  "description": "Homebridge plugin for Bloomsky weather stations",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aphex3k/homebridge-bloomsky.git"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "bloomsky"
+  ],
+  "author": "Michael Henke",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/aphex3k/homebridge-bloomsky/issues"
+  },
+  "homepage": "https://github.com/aphex3k/homebridge-bloomsky#readme",
+  "dependencies": {
+    "child_process": "^1.0.2",
+    "crypto": "^1.0.1",
+    "debug": "^2.6.9",
+    "fs": "0.0.1-security",
+    "homebridge-camera-ffmpeg": "^0.1.8",
+    "ip": "^1.1.5",
+    "node-rest-client": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=4.3.0",
+    "homebridge": ">=0.4.45"
+  }
+}
