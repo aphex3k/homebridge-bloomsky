@@ -168,6 +168,9 @@ Bloomsky.prototype.addAccessory = function(station) {
   newAccessory.addService(Service.MotionSensor, "Rain")
   .getCharacteristic(Characteristic.MotionDetected).updateValue(station.Data.Rain);
 
+  newAccessory.addService(Service.OccupancySensor, "Night")
+  .getCharacteristic(Characteristic.OccupancyDetected).updateValue(station.Data.Night);
+
   // I only have a Sky 1 model so I can only make a guess about the battery level
   // for this specific model.
   if (station.Data.DeviceType == "SKY1")
@@ -224,6 +227,9 @@ Bloomsky.prototype.updateAccessory = function(station) {
 
   accessory.getService(Service.MotionSensor, "Rain")
   .getCharacteristic(Characteristic.MotionDetected).updateValue(station.Data.Rain);
+
+  accessory.getService(Service.OccupancySensor, "Night")
+  .getCharacteristic(Characteristic.OccupancyDetected).updateValue(station.Data.Night);
 
   var informationService = accessory.getService(Service.AccessoryInformation);
   informationService.getCharacteristic(Characteristic.Manufacturer).updateValue("Bloomsky");

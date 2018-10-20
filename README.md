@@ -1,21 +1,25 @@
 # Bloomsky Plugin for Homebridge
 
+<img src="https://github.com/aphex3k/homebridge-bloomsky/raw/master/preview.jpeg" align="right" alt="homebridge-bloomsky" />
+
 This plugin for [Homebridge](https://github.com/nfarina/homebridge) will add
 your personal Bloomsky weather station to HomeKit. You can shop Bloomsky at [Amazon](https://amzn.to/2PHZc1j) for example.
 
-This plugin will expose the following information for each camera associated with your Bloomsky account:
+This plugin will expose the following information for each device associated with your Bloomsky account:
 
 - Humidity
 - Luminance
 - Temperature
 - Rain Sensor
 - Camera
+- Night/Day Status
 
-![Preview Image](/preview.jpeg)
+Since I personally own a SKY1 model from back when it was a Kickstarter, I can only make an educated guess about supporting other models.
+If you have a newer version, you can help me out with the support.
 
 ## Installation
 
-1. Install ffmpeg on your computer with libx264 or (h264_omx for Raspberry Pi)
+1. Install `ffmpeg` on your computer with *libx264* or (*h264_omx* for Raspberry Pi)
 1. Make sure your homebridge setup is current.
 1. Follow the official [homebridge installation instructions](https://github.com/nfarina/homebridge#installation) if you haven't done so yet
 1. Install this plugin using: `npm install -g homebridge-bloomsky`

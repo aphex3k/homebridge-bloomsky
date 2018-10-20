@@ -247,20 +247,12 @@ FFMPEG.prototype.handleStreamRequest = function(request) {
           if(this.debug){
             console.log(data.toString());
           }
-          else
-          {
-            console.log(data.toString());
-          }
         });
         // Always setup hook on stderr.
         // Without this streaming stops within one to two minutes.
         ffmpeg.stderr.on('data', function(data) {
           // Do not log to the console if debugging is turned off
           if(this.debug){
-            console.log(data.toString());
-          }
-          else
-          {
             console.log(data.toString());
           }
         });
