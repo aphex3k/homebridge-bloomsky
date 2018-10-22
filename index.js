@@ -1,28 +1,14 @@
+'use strict';
 var Accessory, Service, Characteristic, UUIDGen, Hap;
 var http = require('http');
 var fs = require('fs');
 var FFMPEG = require('./ffmpeg').FFMPEG;
-// var FFMPEG = require('homebridge-camera-ffmpeg/ffmpeg').FFMPEG;
 const url = require('url');
 const Client = require('node-rest-client').Client;
 
-module.exports = function(homebridge) {
-  console.log("homebridge API version: " + homebridge.version);
-
-  // Accessory must be created from PlatformAccessory Constructor
-  Accessory = homebridge.platformAccessory;
-
-  // Service and Characteristic are from hap-nodejs
-  Service = homebridge.hap.Service;
-  Characteristic = homebridge.hap.Characteristic;
-  Hap = homebridge.hap;
-  UUIDGen = homebridge.hap.uuid;
-
-  // For platform plugin to be considered as dynamic platform plugin,
-  // registerPlatform(pluginName, platformName, constructor, dynamic), dynamic must be true
-  homebridge.registerPlatform("homebridge-bloomsky", "Bloomsky", Bloomsky, true);
-}
-
+module.exports = {
+  Bloomsky: Bloomsky
+};
 // Platform constructor
 // config may be null
 // api may be null if launched from old homebridge version
@@ -54,11 +40,30 @@ function Bloomsky(log, config, api) {
             platform.registerNewAccessories();
         }
       }.bind(this));
-  }
-  this.updateData(this);
 
-  setInterval(this.updateData, 1000 * 60 * 2.5, this);
+      this.updateData(this);
+
+      setInterval(this.updateData, 1000 * 60 * 2.5, this);
+  }
 }
+
+module.exports = function(homebridge) {
+  // console.log("homebridge API version: " + homebridge.version);
+
+  // Accessory must be created from PlatformAccessory Constructor
+  Accessory = homebridge.platformAccessory;
+
+  // Service and Characteristic are from hap-nodejs
+  Service = homebridge.hap.Service;
+  Characteristic = homebridge.hap.Characteristic;
+  Hap = homebridge.hap;
+  UUIDGen = homebridge.hap.uuid;
+
+  // For platform plugin to be considered as dynamic platform plugin,
+  // registerPlatform(pluginName, platformName, constructor, dynamic), dynamic must be true
+  homebridge.registerPlatform("homebridge-bloomsky", "Bloomsky", Bloomsky, true);
+}
+
 
 Bloomsky.prototype.updateData = function(platform) {
     var client = new Client();

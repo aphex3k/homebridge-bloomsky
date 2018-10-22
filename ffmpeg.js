@@ -44,13 +44,6 @@ function FFMPEG(hap, cameraConfig, log, videoProcessor) {
   var numberOfStreams = ffmpegOpt.maxStreams || 2;
   var videoResolutions = [];
 
-  // videoResolutions.push([320, 240, 10]);
-  // videoResolutions.push([320, 180, 10]);
-  // videoResolutions.push([480, 360, 10]);
-  // videoResolutions.push([480, 270, 10]);
-  // videoResolutions.push([640, 480, 10]);
-  // videoResolutions.push([640, 360, 10]);
-
   videoResolutions.push([640, 640, 10]);
 
   let options = {
