@@ -26,7 +26,7 @@ function FFMPEG(hap, cameraConfig, log, videoProcessor) {
   this.fps = ffmpegOpt.maxFPS || 10;
   this.maxBitrate = ffmpegOpt.maxBitrate || 300;
   this.debug = ffmpegOpt.debug;
-  this.additionalCommandline = ffmpegOpt.additionalCommandline || '-tune zerolatency';
+  this.additionalCommandline = ffmpegOpt.additionalCommandline || '-tune stillimage';
 
   if (!ffmpegOpt.source) {
     throw new Error("Missing source for camera.");
@@ -44,12 +44,14 @@ function FFMPEG(hap, cameraConfig, log, videoProcessor) {
   var numberOfStreams = ffmpegOpt.maxStreams || 2;
   var videoResolutions = [];
 
-  videoResolutions.push([320, 240, 10]);
-  videoResolutions.push([320, 180, 10]);
-  videoResolutions.push([480, 360, 10]);
-  videoResolutions.push([480, 270, 10]);
-  videoResolutions.push([640, 480, 10]);
-  videoResolutions.push([640, 360, 10]);
+  // videoResolutions.push([320, 240, 10]);
+  // videoResolutions.push([320, 180, 10]);
+  // videoResolutions.push([480, 360, 10]);
+  // videoResolutions.push([480, 270, 10]);
+  // videoResolutions.push([640, 480, 10]);
+  // videoResolutions.push([640, 360, 10]);
+
+  videoResolutions.push([640, 640, 10]);
 
   let options = {
     proxy: false, // Requires RTP/RTCP MUX Proxy
@@ -182,9 +184,9 @@ FFMPEG.prototype.handleStreamRequest = function(request) {
     if (requestType == "start") {
       var sessionInfo = this.pendingSessions[sessionIdentifier];
       if (sessionInfo) {
-        var width = 1280;
-        var height = 720;
-        var fps = this.fps || 30;
+        var width = 640;
+        var height = 640;
+        var fps = this.fps || 15;
         var vbitrate = this.maxBitrate;
         var abitrate = 32;
         var asamplerate = 16;
@@ -221,8 +223,12 @@ FFMPEG.prototype.handleStreamRequest = function(request) {
         ' -vf fps=1' +
         ' -map 0:0' +
         ' -f mp4 -vcodec '+ vcodec +
-        ' -pix_fmt yuv420p -an -r 10 -g 20 -movflags frag_keyframe+empty_moov -tune stillimage' +
-        ' -vf crop=640:360:0:140' +
+        ' -preset fast'+
+        ' -pix_fmt yuv420p -an' +
+        ' -r '+ fps +
+        ' -g '+ (fps * 2) +
+        ' -movflags frag_keyframe+empty_moov -tune stillimage' +
+        // ' -vf crop=640:360:0:140' +
         ' -b:v ' + vbitrate + 'k' +
         ' -bufsize ' + vbitrate+ 'k' +
         ' -maxrate '+ vbitrate + 'k' +
