@@ -1,0 +1,9 @@
+language: node_js
+node_js:
+  - 10.11.0
+before_install:
+- npm -g i tslint typescript
+script:
+- tslint -c ./tslint.json --project .
+- npm test
+- tsc -t ES5
