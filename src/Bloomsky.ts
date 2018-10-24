@@ -28,6 +28,7 @@ export default class Bloomsky {
   private latestData: IStation[];
   private latestResponse: any;
   private timeout: any;
+  private debug: boolean;
 
   // Platform constructor
   // config may be null
@@ -47,6 +48,7 @@ export default class Bloomsky {
     this.useIntl = config.useIntl || false;
     this.vcodec = config.vcodec || "libx264";
     this.latestData = [] as IStation[];
+    this.debug = config.debug;
 
     this.log("Bloomsky Init");
 
@@ -76,7 +78,7 @@ export default class Bloomsky {
   }
 
   // Function invoked when homebridge tries to restore cached accessory.
-  // Developer can configure accessory at here (like setup event handler).
+  // Developer can configure accessory here (like setup event handler).
   // Update current value.
   public configureAccessory(accessory: IAccessory) {
     this.log(accessory.displayName + " Configure Accessory");
@@ -85,15 +87,18 @@ export default class Bloomsky {
     // Set the accessory to reachable if plugin can currently process the accessory,
     // otherwise set to false and update the reachability later by invoking
     // accessory.updateReachability()
-    accessory.reachable = this.latestData == null;
 
-    if (this.latestData != null) {
+    if (this.latestData != null && this.latestData.length > 0) {
       const stations = platform.latestData
-      .filter((station) => accessory.uuid === Bloomsky.UUIDGen.generate(station.DeviceID));
+        .filter((station) => accessory.uuid === Bloomsky.UUIDGen.generate(station.DeviceID));
 
-      if (stations.length === 1 && stations[0]) {
-          this.updateAccessory(stations[0]);
+      accessory.reachable = stations.length === 1 && stations[0] !== undefined;
+
+      if (accessory.reachable) {
+        this.updateAccessory(stations[0]);
       }
+    } else {
+      accessory.reachable = false;
     }
 
     this.accessories.push(accessory);
@@ -111,7 +116,7 @@ export default class Bloomsky {
       new FFMPEG(Bloomsky.UUIDGen, Bloomsky.Service, Bloomsky.Hap.StreamController, {
         name: station.DeviceName,
         videoConfig: {
-          debug : true,
+          debug : this.debug,
           maxHeight: 640,
           maxStreams: 2,
           maxWidth: 640,
@@ -253,13 +258,19 @@ export default class Bloomsky {
       this.log("updateData");
 
       client.get(this.apiUrl, args, function(data: IStation[], response: any) {
-        platform.latestData = data;
-        platform.latestResponse = response;
 
-        if (data != null) {
-          platform.updateExistingAccessories();
-          platform.registerNewAccessories();
-          platform.updateAccessoriesReachability();
+        const error: any = data as any;
+        if (error.detail) {
+          platform.log(error.detail);
+        } else {
+          platform.latestData = data;
+          platform.latestResponse = response;
+
+          if (data != null && data.length > 0) {
+            platform.updateExistingAccessories();
+            platform.registerNewAccessories();
+            platform.updateAccessoriesReachability();
+          }
         }
       });
     }
@@ -274,6 +285,10 @@ export default class Bloomsky {
       this.log("updateExistingAccessories");
       const platform = this;
 
+      if (this.debug) {
+        this.log(platform.latestData.toString());
+      }
+
       const registeredAccessories = platform.latestData.filter((station) => !this.stationNeedsToBeRegistered(station));
 
       for (let i = 0, len = registeredAccessories.length; i < len; i++) {
@@ -285,6 +300,10 @@ export default class Bloomsky {
   private registerNewAccessories() {
       this.log("registerNewAccessories");
       const platform = this;
+
+      if (this.debug) {
+        this.log(platform.latestData.toString());
+      }
 
       const unregisteredAccessories = platform.latestData.filter((station) => this.stationNeedsToBeRegistered(station));
 

@@ -18,6 +18,7 @@ export default class Bloomsky {
     private latestData;
     private latestResponse;
     private timeout;
+    private debug;
     constructor(log: (text: string) => void, config: any, api: IApi);
     configureAccessory(accessory: IAccessory): void;
     addAccessory(station: IStation): void;
