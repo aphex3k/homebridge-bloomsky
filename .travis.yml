@@ -2,8 +2,9 @@ language: node_js
 node_js:
   - 10.11.0
 before_install:
-- npm -g i tslint typescript
+- npm -g i tslint typescript homebridge
 script:
 - tslint -c ./tslint.json --project .
-- npm test
 - tsc -t ES5
+- npm test
+- timeout -k 20s -s SIGINT 15s homebridge -Q -P ./ -U ./testing-config ; test $? == 124

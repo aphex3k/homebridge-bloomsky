@@ -1,0 +1,21 @@
+{
+    "bridge": {
+        "name": "Homebridge",
+        "username": "CC:22:3D:E3:CE:FF",
+        "pin": "876-54-321"
+    },
+
+    "description": "Testing configuration for an invalid user",
+
+    "accessories": [
+    ],
+
+    "platforms": [
+        {
+            "platform": "Bloomsky",
+            "apiKey": "this-is-not-a-valid-api-key==",
+            "apiUrl": "https://api.bloomsky.com/api/skydata/",
+            "debug": false
+        }
+    ]
+}
