@@ -1,8 +1,8 @@
 export declare interface IAccessory {
     categories: ICategories;
-    uuid: string;
     displayName: string;
     reachable: boolean;
+    UUID: string;
     new (deviceName: string, uuid: string, type: string): any;
     addService(type: string, displayName: string): IService;
     getService(type: string): IService;

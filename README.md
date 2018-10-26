@@ -36,7 +36,8 @@ Add this configuration information to your homebridge `config.json` in the
   "platform": "Bloomsky",
   "apiKey": "your-api-key-here==",
   "apiUrl": "https://api.bloomsky.com/api/skydata/",
-  "vcodec" : "libx264"
+  "vcodec": "libx264",
+  "debug": false
 }
 ```
 
@@ -46,6 +47,7 @@ Property Name | Value | Required
 `apiKey` | Your personal [Bloomsky API](#bloomsky-api) authorization key | yes
 `apiUrl` | Use default value for official public Bloomsky API: `https://api.bloomsky.com/api/skydata/` | no
 `vcodec` | `libx264` by default, use `h264_omx` for Raspberry Pi | no
+`debug` | If set to `true`, will log more information during runtime and try to update camera preview more often, defaults to `false` | no
 
 ## Bloomsky API
 

@@ -17,6 +17,8 @@ export default class Bloomsky {
   public static Hap: IHap;
   public static UUIDGen: IUUIDGen;
 
+  public timeout: NodeJS.Timeout | undefined;
+
   public log: (text: string) => void;
 
   private accessories: IAccessory[];
@@ -27,7 +29,6 @@ export default class Bloomsky {
   private api: any;
   private latestData: IStation[];
   private latestResponse: any;
-  private timeout: any;
   private debug: boolean;
 
   // Platform constructor
@@ -63,17 +64,15 @@ export default class Bloomsky {
         // Or start discover new accessories.
 
         platform.api.on("didFinishLaunching", function() {
-          platform.log("DidFinishLaunching");
+          platform.log("didFinishLaunching");
 
           platform.removeAccessory();
+          platform.updateData();
 
-          if (platform.latestData != null && platform.latestData.length > 0) {
-            platform.registerNewAccessories();
-          }
         }.bind(this));
 
-        platform.updateData();
-        platform.timeout = setInterval(platform.updateData, 1000 * 60 * 2.5);
+    } else {
+      throw Error("Value for API expected...");
     }
   }
 
@@ -90,7 +89,7 @@ export default class Bloomsky {
 
     if (this.latestData != null && this.latestData.length > 0) {
       const stations = platform.latestData
-        .filter((station) => accessory.uuid === Bloomsky.UUIDGen.generate(station.DeviceID));
+        .filter((station) => accessory.UUID === Bloomsky.UUIDGen.generate(station.DeviceID));
 
       accessory.reachable = stations.length === 1 && stations[0] !== undefined;
 
@@ -106,7 +105,7 @@ export default class Bloomsky {
 
   // add accessory dynamically from outside event
   public addAccessory(station: IStation) {
-    this.log("Add Accessory");
+    if (this.debug) { this.log("Add Accessory: " + station.DeviceID); }
     const platform = this;
     const uuid = Bloomsky.UUIDGen.generate(station.DeviceID);
     const filename = station.DeviceID + ".jpg";
@@ -174,18 +173,19 @@ export default class Bloomsky {
     });
     const request = http.get(station.Data.ImageURL, function(response) {
       response.pipe(file);
-      platform.log("temporary file written");
+      if (platform.debug) { platform.log("temporary file written"); }
     });
   }
 
   // add accessory dynamically from outside event
   public updateAccessory(station: IStation) {
-    this.log("Update Accessory");
+    if (this.debug) { this.log("Update Accessory"); }
+
     const platform = this;
     const filename = station.DeviceID + ".jpg";
     const stationUuid = Bloomsky.UUIDGen.generate(station.DeviceID);
     const accessory = platform.accessories
-    .filter((anyAccessory) => anyAccessory.uuid === stationUuid)[0];
+    .filter((anyAccessory) => anyAccessory.UUID === stationUuid)[0];
 
     accessory.getService(Bloomsky.Service.TemperatureSensor)
     .getCharacteristic(Bloomsky.Characteristic.CurrentTemperature).updateValue(station.Data.Temperature);
@@ -225,25 +225,21 @@ export default class Bloomsky {
     const file = fs.createWriteStream(filename);
     file.on("finish", function() {
       file.close();
-      platform.log("temporary file updated...");
+      if (platform.debug) { platform.log("temporary file updated..."); }
     });
     const request = http.get(station.Data.ImageURL, function(response) {
       response.pipe(file);
-      platform.log("temporary file updating...");
+      if (platform.debug) { platform.log("temporary file updating..."); }
     });
   }
 
   // remove accessory dynamically from outside event
   public removeAccessory() {
     const platform = this;
-    platform.log("Remove Accessory");
+    if (platform.debug) { platform.log("Remove Accessory"); }
     platform.api.unregisterPlatformAccessories("homebridge-bloomsky", "Bloomsky", platform.accessories);
 
     platform.accessories = [] as IAccessory[];
-  }
-
-  public cleanup() {
-    clearInterval(this.timeout);
   }
 
   private updateData() {
@@ -255,7 +251,7 @@ export default class Bloomsky {
           parameters: { unit: "intl" },
       };
 
-      this.log("updateData");
+      if (platform.debug) { this.log("updateData"); }
 
       client.get(this.apiUrl, args, function(data: IStation[], response: any) {
 
@@ -267,55 +263,60 @@ export default class Bloomsky {
           platform.latestResponse = response;
 
           if (data != null && data.length > 0) {
-            platform.updateExistingAccessories();
+
+            if (platform.accessories.length > 0) {
+              platform.updateExistingAccessories();
+            }
             platform.registerNewAccessories();
             platform.updateAccessoriesReachability();
           }
         }
+
+        platform.timeout = setTimeout(function() { platform.updateData(); }.bind(platform),
+          platform.debug ? 10000 : 150000); // 2.5 minutes, 10 seconds for debugging
+        platform.timeout.unref();
       });
     }
   }
 
   private stationNeedsToBeRegistered(station: IStation) {
-      const stationUuid = Bloomsky.UUIDGen.generate(station.DeviceID);
-      return this.accessories.filter((accessory) => accessory.uuid === stationUuid).length === 0;
+    const stationUuid = Bloomsky.UUIDGen.generate(station.DeviceID).valueOf();
+    return this.accessories.filter((accessory) => accessory.UUID.valueOf() === stationUuid).length === 0;
   }
 
   private updateExistingAccessories() {
-      this.log("updateExistingAccessories");
-      const platform = this;
+    if (this.debug) { this.log("updateExistingAccessories"); }
+    const platform = this;
 
-      if (this.debug) {
-        this.log(platform.latestData.toString());
-      }
+    if (this.debug) {
+      this.log(platform.latestData.toString());
+    }
 
-      const registeredAccessories = platform.latestData.filter((station) => !this.stationNeedsToBeRegistered(station));
+    const registeredAccessories = platform.latestData.filter((station) => !this.stationNeedsToBeRegistered(station));
 
-      for (let i = 0, len = registeredAccessories.length; i < len; i++) {
-          const station = registeredAccessories[i];
-          platform.updateAccessory(station);
-      }
+    for (let i = 0, len = registeredAccessories.length; i < len; i++) {
+        const station = registeredAccessories[i];
+        platform.updateAccessory(station);
+    }
   }
 
   private registerNewAccessories() {
-      this.log("registerNewAccessories");
-      const platform = this;
+    if (this.debug) { this.log("registerNewAccessories"); }
+    const platform = this;
 
-      if (this.debug) {
-        this.log(platform.latestData.toString());
-      }
+    if (this.debug) {
+      this.log(platform.latestData.toString());
+    }
 
-      const unregisteredAccessories = platform.latestData.filter((station) => this.stationNeedsToBeRegistered(station));
+    const unregisteredAccessories = platform.latestData.filter((station) => this.stationNeedsToBeRegistered(station));
 
-      for (let i = 0, len = unregisteredAccessories.length; i < len; i++) {
-          const station = unregisteredAccessories[i];
-
-          platform.addAccessory(station);
-      }
+    for (let i = 0, len = unregisteredAccessories.length; i < len; i++) {
+        platform.addAccessory(unregisteredAccessories[i]);
+    }
   }
 
   private updateAccessoriesReachability() {
-    this.log("Update Reachability");
+    if (this.debug) { this.log("Update Reachability"); }
     for (const accessory of this.accessories) {
       accessory.updateReachability(this.latestData != null);
       accessory.reachable = this.latestData != null;
