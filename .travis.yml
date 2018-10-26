@@ -5,6 +5,6 @@ before_install:
 - npm -g i tslint typescript homebridge
 script:
 - tslint -c ./tslint.json --project .
-- tsc -t ES5
+- tsc
 - npm test
 - timeout -k 20s -s SIGINT 15s homebridge -Q -P ./ -U ./testing-config ; test $? == 124

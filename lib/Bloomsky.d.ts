@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { IApi } from "./Api";
 import { IAccessory, ICharacteristic, IHap, IService, IUUIDGen } from "./HAP";
 import { IStation } from "./Station";
@@ -8,6 +9,7 @@ export default class Bloomsky {
     static Characteristic: ICharacteristic;
     static Hap: IHap;
     static UUIDGen: IUUIDGen;
+    timeout: NodeJS.Timeout | undefined;
     log: (text: string) => void;
     private accessories;
     private apiKey;
@@ -17,14 +19,12 @@ export default class Bloomsky {
     private api;
     private latestData;
     private latestResponse;
-    private timeout;
     private debug;
     constructor(log: (text: string) => void, config: any, api: IApi);
     configureAccessory(accessory: IAccessory): void;
     addAccessory(station: IStation): void;
     updateAccessory(station: IStation): void;
     removeAccessory(): void;
-    cleanup(): void;
     private updateData;
     private stationNeedsToBeRegistered;
     private updateExistingAccessories;

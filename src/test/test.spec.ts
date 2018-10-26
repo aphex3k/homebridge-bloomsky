@@ -27,6 +27,7 @@ const mockHomebridge = {
     },
     config: {
         apiUrl : "https://api.bloomsky.com/api/skydata/",
+        debug : true,
         useIntl : true,
     },
     hap: {
@@ -70,7 +71,7 @@ describe("Mock Homebridge", () => {
       expect(mockHomebridge.hap.uuid).to.not.be.equal(null);
       expect(mockHomebridge.hap.uuid).to.not.be.equal(undefined);
     });
-  });
+});
 
 describe("Bloomsky", () => {
 
@@ -93,6 +94,4 @@ describe("Bloomsky", () => {
       expect(bloomsky).to.not.be.equal(null);
       expect(bloomsky).to.not.be.equal(undefined);
     });
-
-    bloomsky.cleanup();
-  });
+});
