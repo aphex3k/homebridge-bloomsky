@@ -1,17 +1,30 @@
 import { spawn } from "child_process";
 import * as crypto from "crypto";
+import * as fs from "fs";
+import "hap-nodejs";
 import * as ip from "ip";
-import { IService, ISnapshotRequest, IStreamController, IUUIDGen } from "./HAP";
-import { ISessionInfo, ISrtpStreamDefinition, IStreamRequest, IStreamResponse } from "./IStreamRequest";
+import { AddressResponse } from "./AddressResponse";
+import { AudioResponse } from "./AudioResponse";
+import { SessionInfo } from "./Session";
+import { SnapshotRequest } from "./SnapshotRequest";
+import { StreamController } from "./StreamController";
+import { StreamRequest } from "./StreamRequest";
+import { StreamResponse } from "./StreamResponse";
+import { VideoResponse } from "./VideoResponse";
 
-export { FFMPEG };
+export default class FFMPEG implements HAPNodeJS.CameraSource {
 
-export default class FFMPEG {
-  private uuid: IUUIDGen;
-  private service: IService;
-  private streamController: any;
+  public streamController: any;
+  public streamControllers: StreamController[] = [];
+  public cameraControllers: any[] = [];
+  public pendingSessions: SessionInfo[] = [];
+  public ongoingSessions: SessionInfo[] = [];
+  public services: HAPNodeJS.Service[] = [];
+  public name: string;
+  public uuid: HAPNodeJS.uuid;
+  public service: any;
+
   private log: (text: string) => void;
-  private name: string;
   private vcodec: string;
   private videoProcessor: string;
   private fps: number;
@@ -19,30 +32,28 @@ export default class FFMPEG {
   private debug: boolean;
   private ffmpegSource: string;
   private ffmpegImageSource: string;
-  private services: any[];
-  private streamControllers: IStreamController[];
-  private pendingSessions: any;
-  private ongoingSessions: any;
+
+  private stillImageFilename: string;
 
   constructor(
-      uuidgen: IUUIDGen,
-      service: IService,
-      streamController: IStreamController,
+      uuidfunc: HAPNodeJS.uuid,
+      hap: any,
       cameraConfig: any,
       log: (text: string) => void,
-      videoProcessor: string) {
+      videoProcessor: string,
+      stillImageFilename: string) {
 
-    if (uuidgen === undefined) { throw Error("UUIDGen undefined"); }
-    if (service === undefined) { throw Error("Service undefined"); }
-    if (streamController === undefined) { throw Error("StreamController undefined"); }
+    if (uuidfunc === undefined) { throw Error("UUIDGen undefined"); }
+    if (hap.Service === undefined) { throw Error("Service undefined"); }
     if (log === undefined) { throw Error("Log undefined"); }
+    if (hap.StreamController === undefined) { throw Error("StreamController undefined"); }
 
     if (cameraConfig.videoConfig.debug) { log("FFMPEG constructor"); }
 
-    this.uuid = uuidgen;
-    this.service = service;
-    this.streamController = streamController;
+    this.uuid = uuidfunc;
+    this.service = hap.Service;
     this.log = log;
+    this.streamController = hap.StreamController;
 
     const ffmpegOpt = cameraConfig.videoConfig;
     this.name = cameraConfig.name;
@@ -60,22 +71,25 @@ export default class FFMPEG {
 
     this.ffmpegSource = ffmpegOpt.source;
     this.ffmpegImageSource = ffmpegOpt.stillImageSource;
+    this.stillImageFilename = stillImageFilename;
 
-    this.services = [];
-    this.streamControllers = [] as IStreamController[];
-
-    this.pendingSessions = {};
-    this.ongoingSessions = {};
-
-    const numberOfStreams = ffmpegOpt.maxStreams || 2;
-    const videoResolutions =  [] as number[][];
-
-    videoResolutions.push([640, 640, 10]);
+    const numberOfStreams: number = ffmpegOpt.maxStreams || 2;
 
     const options = {
         audio: {
-            codecs: [],
+            codecs: [
+                {
+                    samplerate: 24, // 8, 16, 24 KHz
+                    type: "OPUS", // Audio Codec
+                },
+                {
+                    samplerate: 16,
+                    type: "AAC-eld",
+                },
+            ],
+            comfort_noise: false,
         },
+        disable_audio_proxy: false, // If proxy = true, you can opt out audio proxy via this
         proxy: false, // Requires RTP/RTCP MUX Proxy
         srtp: true, // Supports SRTP AES_CM_128_HMAC_SHA1_80 encryption
         video: {
@@ -83,77 +97,90 @@ export default class FFMPEG {
                 levels: [0, 1, 2], // Enum, please refer StreamController.VideoCodecParamLevelTypes
                 profiles: [0, 1, 2], // Enum, please refer StreamController.VideoCodecParamProfileIDTypes
             },
-            resolutions: videoResolutions,
+            resolutions: [
+                [640, 640, 30],
+                [640, 640, 15],
+                [640, 480, 30],
+                [640, 480, 15],
+                [640, 360, 30],
+                [640, 360, 15],
+                [480, 360, 30],
+                [480, 360, 15],
+                [480, 270, 30],
+                [480, 270, 15],
+                [320, 240, 30],
+                [320, 240, 15], // Apple Watch requires this configuration
+                [320, 180, 30],
+                [320, 180, 15],
+              ],
         },
     };
 
     this.createCameraControlService();
+
+    if (this.cameraControllers.length < 1) {
+        throw Error("Did not push camera controller...");
+    }
+
     this._createStreamControllers(numberOfStreams, options);
   }
 
   public handleCloseConnection(connectionID: any) {
     if (this.debug) { this.log("closing connection for " + this.streamControllers.length + " stream(s)..."); }
-    this.streamControllers.forEach(function(controller: IStreamController) {
+    this.streamControllers.forEach(function(controller: StreamController) {
         controller.handleCloseConnection(connectionID);
     });
   }
 
-  public handleSnapshotRequest(request: ISnapshotRequest, callback: (error: any, Buffer) => void) {
-    if (this.debug) { this.log("handleSnapshotRequest"); }
+  // Image request: {width: number, height: number}
+  // Please override this and invoke callback(error, image buffer) when the snapshot is ready
+  public handleSnapshotRequest(request: SnapshotRequest, callback: (error: any, Buffer) => any) {
 
-    const platform = this;
-    const resolution = request.width + "x" + request.height;
-    const imageSource = this.ffmpegImageSource !== undefined ? this.ffmpegImageSource : this.ffmpegSource;
-    const ffmpeg = spawn(
-        this.videoProcessor, (imageSource + " -t 1 -s " + resolution + " -f image2 -").split(" "), {env: process.env},
-    );
-    let imageBuffer = new Buffer(0);
-    this.log("Snapshot from " + this.name + " at " + resolution);
+    throw Error ("handleSnapshotRequest");
 
-    if (this.debug) { this.log("ffmpeg " + imageSource + " -t 1 -s " + resolution + " -f image2 -"); }
+    const path = __dirname + "/" + this.stillImageFilename;
 
-    ffmpeg.stdout.on("data", function(data) {
-        imageBuffer = Buffer.concat([imageBuffer, data]);
-    });
+    if (this.debug) { this.log("Delivering snapshot at path: " + path); }
 
-    ffmpeg.on("error", function(error: any) {
-        platform.log("An error occurs while making snapshot request");
-        if (platform.debug) {
-            platform.log(error);
-        }
-    });
-    ffmpeg.on("close", function(code) {
-        callback(undefined, imageBuffer);
-    }.bind(this));
+    throw Error (path);
+
+    const snapshot = fs.readFileSync(path);
+    callback(undefined, snapshot);
   }
 
-  public prepareStream(request: IStreamRequest, callback: (response: { } ) => void) {
+  public prepareStream(request: StreamRequest, callback: (response: StreamResponse) => void) {
     if (this.debug) { this.log("prepareStream"); }
 
-    const sessionInfo: ISessionInfo = {} as ISessionInfo;
+    const sessionInfo = {} as  SessionInfo;
     const sessionID = request.sessionID;
     const targetAddress = request.targetAddress;
 
     sessionInfo.address = targetAddress;
 
-    const response: IStreamResponse = {} as IStreamResponse;
-    const videoInfo: any = request.video;
+    const response = {} as StreamResponse;
+    const videoInfo = request.video;
 
     if (videoInfo) {
-        const targetPort = videoInfo.port;
-        const srtpKey = videoInfo.srtp_key;
-        const srtpSalt = videoInfo.srtp_salt;
+        const targetPort: number = videoInfo.port;
+        const srtpKey: Uint8Array = videoInfo.srtp_key;
+        const srtpSalt: Uint8Array = videoInfo.srtp_salt;
+
+        if (this.debug) { this.log ("srtpKey.length=" + srtpKey.length + ", srtpSalt.length=" + srtpSalt.length); }
 
         // SSRC is a 32 bit integer that is unique per stream
         const ssrcSource = crypto.randomBytes(4);
         ssrcSource[0] = 0;
         const ssrc = ssrcSource.readInt32BE(0, true);
 
-        const videoResp = {
+        const videoResp: VideoResponse = {
+            fps: videoInfo.fps,
+            height: videoInfo.height,
+            max_bit_rate: videoInfo.max_bit_rate,
             port: targetPort,
             srtp_key: srtpKey,
             srtp_salt: srtpSalt,
             ssrc,
+            width: videoInfo.width,
         };
 
         response.video = videoResp;
@@ -175,22 +202,22 @@ export default class FFMPEG {
         ssrcSource[0] = 0;
         const ssrc = ssrcSource.readInt32BE(0, true);
 
-        const audioResp: ISrtpStreamDefinition = {
+        const audioResp: AudioResponse = {
             port: targetPort,
             srtp_key: srtpKey,
             srtp_salt: srtpSalt,
             ssrc,
         };
 
-        response.autio = audioResp;
+        response.audio = audioResp;
 
         sessionInfo.audio_port = targetPort;
-        sessionInfo.audio_srtp = Buffer.concat([srtpKey, srtpSalt]);
+        sessionInfo.audio_port = Buffer.concat([srtpKey, srtpSalt]);
         sessionInfo.audio_ssrc = ssrc;
     }
 
     const currentAddress = ip.address();
-    const addressResp = {
+    const addressResp: AddressResponse = {
         address: currentAddress,
         type: "v6",
     };
@@ -200,18 +227,18 @@ export default class FFMPEG {
     }
 
     response.address = addressResp;
-    this.pendingSessions[this.uuid.unparse(sessionID)] = sessionInfo;
+    this.pendingSessions[this.uuid.unparse(sessionID, 0)] = sessionInfo;
 
     callback(response);
   }
 
-  public handleStreamRequest(request: IStreamRequest) {
+  public handleStreamRequest(request: StreamRequest) {
     if (this.debug) { this.log("handleStreamRequest"); }
     const platform = this;
     const sessionID = request.sessionID;
     const requestType = request.type;
     if (sessionID) {
-        const sessionIdentifier = this.uuid.unparse(sessionID);
+        const sessionIdentifier = this.uuid.unparse(sessionID, 0);
         const sessionInfo = this.pendingSessions[sessionIdentifier];
 
         if (requestType === "start" && sessionInfo) {
@@ -219,12 +246,10 @@ export default class FFMPEG {
             let height = 640;
             let fps = this.fps || 15;
             let vbitrate = this.maxBitrate;
-            const abitrate = 32;
-            const asamplerate = 16;
             const vcodec = this.vcodec || "libx264";
             const packetsize = 1316; // 188 376
 
-            const videoInfo: any = request.video;
+            const videoInfo = request.video;
             if (videoInfo) {
                 width = videoInfo.width;
                 height = videoInfo.height;
@@ -331,21 +356,28 @@ export default class FFMPEG {
     const controlService = new this.service.CameraControl();
 
     this.services.push(controlService);
+    this.cameraControllers.push(controlService);
+
+    if (this.services.filter((s) => s === controlService).length < 1) {
+        throw Error ("Failed to register Camera Control Service...");
+    }
   }
 
   // Private
   private _createStreamControllers(maxStreams, options) {
-    if (this.streamController === undefined) {
-        throw Error("StreamController undefined");
-    }
 
     if (this.debug) { this.log("_createStreamControllers"); }
 
     for (let i = 0; i < maxStreams; i++) {
+        if (this.debug) { this.log("adding StreamController #" + (i + 1) + "/" + maxStreams); }
         const streamController = new this.streamController(i, options, this);
 
         this.services.push(streamController.service);
         this.streamControllers.push(streamController);
     }
+
+    if (this.debug) { this.log(this.streamControllers.length + "/" + maxStreams + " stream controllers registered"); }
   }
 }
+
+export { FFMPEG };

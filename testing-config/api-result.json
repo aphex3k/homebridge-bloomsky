@@ -1,0 +1,55 @@
+[
+    {
+        "UTC": -7,
+        "CityName": "Los Angeles",
+        "Storm": {},
+        "Searchable": false,
+        "DeviceName": "Donna Sky",
+        "RegisterTime": 1433814467,
+        "DST": 1,
+        "BoundedPoint": "",
+        "LON": -118.6919183,
+        "Point": {},
+        "VideoList": [
+            "http://s3.amazonaws.com/bskytimelapses/eaB1rJytnZSmmZu1_-7_2018-10-23.mp4",
+            "http://s3.amazonaws.com/bskytimelapses/eaB1rJytnZSmmZu1_-7_2018-10-24.mp4",
+            "http://s3.amazonaws.com/bskytimelapses/eaB1rJytnZSmmZu1_-7_2018-10-25.mp4",
+            "http://s3.amazonaws.com/bskytimelapses/eaB1rJytnZSmmZu1_-7_2018-10-26.mp4",
+            "http://s3.amazonaws.com/bskytimelapses/eaB1rJytnZSmmZu1_-7_2018-10-27.mp4"
+        ],
+        "VideoList_C": [
+            "http://s3.amazonaws.com/bskytimelapses/eaB1rJytnZSmmZu1_-7_2018-10-23_C.mp4",
+            "http://s3.amazonaws.com/bskytimelapses/eaB1rJytnZSmmZu1_-7_2018-10-24_C.mp4",
+            "http://s3.amazonaws.com/bskytimelapses/eaB1rJytnZSmmZu1_-7_2018-10-25_C.mp4",
+            "http://s3.amazonaws.com/bskytimelapses/eaB1rJytnZSmmZu1_-7_2018-10-26_C.mp4",
+            "http://s3.amazonaws.com/bskytimelapses/eaB1rJytnZSmmZu1_-7_2018-10-27_C.mp4"
+        ],
+        "DeviceID": "123456789012",
+        "NumOfFollowers": 1,
+        "LAT": 34.0201613,
+        "ALT": 142,
+        "Data": {
+            "Luminance": 21,
+            "Temperature": 63.61,
+            "ImageURL": "http://s3-us-west-1.amazonaws.com/bskyimgs/eaB1rJytnZSmmZu1qJ1lqpWtnpGmmpo=.jpg",
+            "TS": 1540697959,
+            "Rain": true,
+            "Humidity": 99,
+            "Pressure": 295.27,
+            "DeviceType": "SKY1",
+            "Voltage": 2594,
+            "Night": true,
+            "UVIndex": "1",
+            "ImageTS": 1540690225
+        },
+        "FullAddress": "Pico Blvd, Los Angeles, CA, US",
+        "StreetName": "Pico Blvd",
+        "PreviewImageList": [
+            "http://s3-us-west-1.amazonaws.com/bskyimgs/eaB1rJytnZSmmZu1qJ1lqpWqmJirn54=.jpg",
+            "http://s3-us-west-1.amazonaws.com/bskyimgs/eaB1rJytnZSmmZu1qJ1lqpWrlpamm5s=.jpg",
+            "http://s3-us-west-1.amazonaws.com/bskyimgs/eaB1rJytnZSmmZu1qJ1lqpWslZOloJg=.jpg",
+            "http://s3-us-west-1.amazonaws.com/bskyimgs/eaB1rJytnZSmmZu1qJ1lqpWsnpKompc=.jpg",
+            "http://s3-us-west-1.amazonaws.com/bskyimgs/eaB1rJytnZSmmZu1qJ1lqpWtnJSrnZw=.jpg"
+        ]
+    }
+]

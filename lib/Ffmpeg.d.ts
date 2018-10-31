@@ -1,12 +1,21 @@
-import { IService, ISnapshotRequest, IStreamController, IUUIDGen } from "./HAP";
-import { IStreamRequest } from "./IStreamRequest";
+import "hap-nodejs";
+import { SessionInfo } from "./Session";
+import { SnapshotRequest } from "./SnapshotRequest";
+import { StreamController } from "./StreamController";
+import { StreamRequest } from "./StreamRequest";
+import { StreamResponse } from "./StreamResponse";
 export { FFMPEG };
-export default class FFMPEG {
-    private uuid;
-    private service;
-    private streamController;
+declare class FFMPEG implements HAPNodeJS.CameraSource {
+    streamController: any;
+    streamControllers: StreamController[];
+    cameraControllers: any[];
+    pendingSessions: SessionInfo[];
+    ongoingSessions: SessionInfo[];
+    services: HAPNodeJS.Service[];
+    name: string;
+    uuid: HAPNodeJS.uuid;
+    service: any;
     private log;
-    private name;
     private vcodec;
     private videoProcessor;
     private fps;
@@ -14,15 +23,12 @@ export default class FFMPEG {
     private debug;
     private ffmpegSource;
     private ffmpegImageSource;
-    private services;
-    private streamControllers;
-    private pendingSessions;
-    private ongoingSessions;
-    constructor(uuidgen: IUUIDGen, service: IService, streamController: IStreamController, cameraConfig: any, log: (text: string) => void, videoProcessor: string);
+    private stillImageFilename;
+    constructor(uuidfunc: HAPNodeJS.uuid, hap: any, cameraConfig: any, log: (text: string) => void, videoProcessor: string, stillImageFilename: string);
     handleCloseConnection(connectionID: any): void;
-    handleSnapshotRequest(request: ISnapshotRequest, callback: (error: any, Buffer: any) => void): void;
-    prepareStream(request: IStreamRequest, callback: (response: {}) => void): void;
-    handleStreamRequest(request: IStreamRequest): void;
+    handleSnapshotRequest(request: SnapshotRequest, callback: (error: any, Buffer: any) => any): void;
+    prepareStream(request: StreamRequest, callback: (response: StreamResponse) => void): void;
+    handleStreamRequest(request: StreamRequest): void;
     createCameraControlService(): void;
     private _createStreamControllers;
 }
