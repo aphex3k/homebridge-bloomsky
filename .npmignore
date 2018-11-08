@@ -33,3 +33,4 @@ tslint.json
 
 npm-debug.log
 snapshot-error.txt
+persist/
