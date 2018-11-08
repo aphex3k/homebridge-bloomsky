@@ -136,13 +136,13 @@ export default class FFMPEG implements HAPNodeJS.CameraSource {
   // Please override this and invoke callback(error, image buffer) when the snapshot is ready
   public handleSnapshotRequest(request: SnapshotRequest, callback: (error: any, Buffer) => any) {
 
-    throw Error ("handleSnapshotRequest");
-
-    const path = __dirname + "/" + this.stillImageFilename;
+    let dir = __dirname;
+    if (dir.endsWith("/lib")) {
+        dir = dir.replace("/lib", "");
+    }
+    const path = dir + "/" + this.stillImageFilename;
 
     if (this.debug) { this.log("Delivering snapshot at path: " + path); }
-
-    throw Error (path);
 
     const snapshot = fs.readFileSync(path);
     callback(undefined, snapshot);

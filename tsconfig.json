@@ -5,7 +5,7 @@
     "strict": true,
     "noImplicitAny": false,
     "target": "ES5",
-    "lib": [ "es2015" ],
+    "lib": [ "es2017" ],
     "baseUrl": ".",
     "allowJs": false
   },

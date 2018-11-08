@@ -68,6 +68,10 @@ export default class Bloomsky {
 
       }.bind(this));
 
+      platform.api.on("publishCameraAccessories", function() {
+        platform.log("publishCameraAccessories");
+      });
+
     } else {
         platform.updateData().catch((clientError) => { platform.log(clientError); });
     }
@@ -82,16 +86,6 @@ export default class Bloomsky {
 
     const platform = this;
     const ffmpeg = this.getFfmpegForStationWithUuid(accessory.UUID);
-
-    const countBefore = ffmpeg.services.length;
-
-    ffmpeg.createCameraControlService();
-
-    if (ffmpeg.services.length <= countBefore) {
-      throw Error ("Camera Control Service Registration failed... :(");
-    } else {
-      if (this.debug) { this.log("Registered " + (ffmpeg.services.length - countBefore) + " Camera Control Services"); }
-    }
     accessory.cameraSource = ffmpeg;
 
     for (const index in ffmpeg.services) {
@@ -202,11 +196,27 @@ export default class Bloomsky {
     informationService.getCharacteristic(Bloomsky.Characteristic.Name).updateValue(station.DeviceName);
     informationService.getCharacteristic(Bloomsky.Characteristic.FirmwareRevision).updateValue(station.Data.DeviceType);
 
-    this.accessories.push(newAccessory);
+    if (this.debug) { this.accessories.push(newAccessory); }
+
+    this.log("new accessory pushed...");
+
     if (this.api !== undefined ) {
-      this.api.registerPlatformAccessories("homebridge-bloomsky", "Bloomsky", this.accessories);
+      // https://github.com/nfarina/homebridge/wiki/Supporting-IP-Camera
+      this.api.publishCameraAccessories("homebridge-bloomsky", this.accessories);
     } else {
       throw TypeError("this.api UNDEFINED!!!");
+    }
+
+    if (this.debug) { this.log("new accessory registered..."); }
+
+    if (this.debug) {
+      let output = "";
+      for (const property in newAccessory) {
+        if (newAccessory.hasOwnProperty(property)) {
+          output += property + ": " + newAccessory[property] + "; ";
+        }
+      }
+      this.log(output);
     }
   }
 
@@ -259,7 +269,7 @@ export default class Bloomsky {
       file.close();
       if (platform.debug) { platform.log("temporary file updated..."); }
     });
-    const request = http.get(station.Data.ImageURL, function(response) {
+    http.get(station.Data.ImageURL, function(response) {
       response.pipe(file);
       platform.log("temporary file written");
     });
@@ -299,7 +309,9 @@ export default class Bloomsky {
   }
 
   private async updateData() {
-    if (this.apiKey !== undefined) {
+    if (this.apiKey === undefined) {
+      if (this.debug) { this.log("Skipping updating data..."); }
+    } else {
       const platform = this;
 
       const requestOptions: Client.IRequestOptions = {

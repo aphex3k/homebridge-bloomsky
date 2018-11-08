@@ -4,8 +4,7 @@ import { SnapshotRequest } from "./SnapshotRequest";
 import { StreamController } from "./StreamController";
 import { StreamRequest } from "./StreamRequest";
 import { StreamResponse } from "./StreamResponse";
-export { FFMPEG };
-declare class FFMPEG implements HAPNodeJS.CameraSource {
+export default class FFMPEG implements HAPNodeJS.CameraSource {
     streamController: any;
     streamControllers: StreamController[];
     cameraControllers: any[];
@@ -32,3 +31,4 @@ declare class FFMPEG implements HAPNodeJS.CameraSource {
     createCameraControlService(): void;
     private _createStreamControllers;
 }
+export { FFMPEG };

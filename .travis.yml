@@ -1,11 +1,21 @@
 language: node_js
 node_js:
-  - 10.11.0
+  - 4.3.0
+  - 4.9.1
+  - 6.14.4
+  - 8.12.0
+  - 10.13.0
+  - 11.1.0
 before_install:
-- npm --verbose -g i tslint typescript homebridge
+- npm -g i jshint tslint typescript homebridge
+- node --version | grep -v v4.*.* && npm -g i eslint || echo Skipping ESLint for node 4.x
+- homebridge --version
 script:
 - tslint -c ./tslint.json --project .
 - tsc
+- node --version | grep -v v4.*.* && eslint -c .eslintrc.json *.js || echo Skipping ESLint for node 4.x
+- jshint -c .jshintrc *.js
 - npm --verbose test
-- npm --verbose publish --dry-run
+- node --version | grep -v v4.*.* && npm --dry-run publish || echo Skipping publish dry-run for node 4.x
 - DEBUG=* timeout -k 20s -s SIGINT 15s homebridge -Q -P ./ -U ./testing-config ; test $? == 124
+- timeout -k 20s -s SIGINT 15s node standalone.js ; test $? == 124
