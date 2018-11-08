@@ -1,40 +1,39 @@
 import * as fs from "fs";
+import * as hap from "hap-nodejs";
 import * as http from "http";
-import { Client } from "node-rest-client";
-import * as url from "url";
-import { IApi } from "./Api";
+import * as Client from "typed-rest-client";
+import { IHeaders } from "typed-rest-client/Interfaces";
 import { FFMPEG } from "./Ffmpeg";
-import { IAccessory, ICharacteristic, IHap, IService, IUUIDGen } from "./HAP";
+import { API } from "./homebridge";
+import { PlatformAccessory } from "./PlatformAccessory";
 import { IStation } from "./Station";
 
 export { Bloomsky };
 
 export default class Bloomsky {
 
-  public static Accessory: any;
-  public static Service: IService;
-  public static Characteristic: ICharacteristic;
-  public static Hap: IHap;
-  public static UUIDGen: IUUIDGen;
+  public static Accessory: PlatformAccessory;
+  public static Service: HAPNodeJS.Service;
+  public static Characteristic: HAPNodeJS.Characteristic;
+  public static Hap: HAPNodeJS.HAPNodeJS;
+  public static UUIDGen: HAPNodeJS.uuid;
 
   public timeout: NodeJS.Timeout | undefined;
+  public accessories: PlatformAccessory[];
 
   public log: (text: string) => void;
 
-  private accessories: IAccessory[];
   private apiKey: string;
-  private apiUrl: url.UrlWithStringQuery;
-  private useIntl: boolean;
+  private apiUrl: string;
   private vcodec: string;
-  private api: any;
+  private api: API | undefined;
   private latestData: IStation[];
-  private latestResponse: any;
   private debug: boolean;
 
   // Platform constructor
   // config may be null
   // api may be null if launched from old homebridge version
-  constructor(log: (text: string) => void, config: any, api: IApi) {
+  constructor(log: (text: string) => void, config: any, api: API) {
 
     if (Bloomsky.Accessory === undefined) { throw Error("Accessory undefined"); }
     if (Bloomsky.Service === undefined) { throw Error("Service undefined"); }
@@ -43,10 +42,9 @@ export default class Bloomsky {
     if (Bloomsky.UUIDGen === undefined) { throw Error("UUIDGen undefined"); }
 
     this.log = log;
-    this.accessories = [] as IAccessory[];
+    this.accessories = [] as PlatformAccessory[];
     this.apiKey = config.apiKey;
-    this.apiUrl = url.parse(config.apiUrl) || url.parse("https://api.bloomsky.com/api/skydata/");
-    this.useIntl = config.useIntl || false;
+    this.apiUrl = config.apiUrl || "https://api.bloomsky.com/api/skydata/";
     this.vcodec = config.vcodec || "libx264";
     this.latestData = [] as IStation[];
     this.debug = config.debug;
@@ -56,38 +54,68 @@ export default class Bloomsky {
     const platform = this;
 
     if (api) {
-        // Save the API object as plugin needs to register new accessory via this object
-        platform.api = api;
+      // Save the API object as plugin needs to register new accessory via this object
+      platform.api = api;
 
-        // Listen to event "didFinishLaunching", this means homebridge already finished loading cached accessories.
-        // Platform Plugin should only register new accessory that doesn't exist in homebridge after this event.
-        // Or start discover new accessories.
+      // Listen to event "didFinishLaunching", this means homebridge already finished loading cached accessories.
+      // Platform Plugin should only register new accessory that doesn't exist in homebridge after this event.
+      // Or start discover new accessories.
 
-        platform.api.on("didFinishLaunching", function() {
-          platform.log("didFinishLaunching");
+      platform.api.on("didFinishLaunching", function() {
+        platform.log("didFinishLaunching");
 
-          platform.removeAccessory();
-          platform.updateData();
+        platform.updateData().catch((clientError) => { platform.log(clientError); });
 
-        }.bind(this));
+      }.bind(this));
 
     } else {
-      throw Error("Value for API expected...");
+        platform.updateData().catch((clientError) => { platform.log(clientError); });
     }
   }
 
   // Function invoked when homebridge tries to restore cached accessory.
   // Developer can configure accessory here (like setup event handler).
   // Update current value.
-  public configureAccessory(accessory: IAccessory) {
-    this.log(accessory.displayName + " Configure Accessory");
-    const platform = this;
+  public configureAccessory(accessory: PlatformAccessory) {
 
+    if (this.debug) { this.log("configuring accessory... " + accessory.displayName); }
+
+    const platform = this;
+    const ffmpeg = this.getFfmpegForStationWithUuid(accessory.UUID);
+
+    const countBefore = ffmpeg.services.length;
+
+    ffmpeg.createCameraControlService();
+
+    if (ffmpeg.services.length <= countBefore) {
+      throw Error ("Camera Control Service Registration failed... :(");
+    } else {
+      if (this.debug) { this.log("Registered " + (ffmpeg.services.length - countBefore) + " Camera Control Services"); }
+    }
+    accessory.cameraSource = ffmpeg;
+
+    for (const index in ffmpeg.services) {
+      if (ffmpeg.hasOwnProperty(index)) {
+        const service = ffmpeg.services[index];
+        try {
+          accessory.removeService(service);
+        } catch {
+          if (this.debug) { this.log("unable to remove existing camera service"); }
+        } finally {
+          accessory.addService(service);
+          if (this.debug) { this.log("added camera service: " + service.displayName); }
+        }
+      }
+    }
+
+    // Do not add any existing services... but this is a good place to add services to earlier registered accessories
+
+    this.accessories.push(accessory);
     // Set the accessory to reachable if plugin can currently process the accessory,
     // otherwise set to false and update the reachability later by invoking
     // accessory.updateReachability()
-
     if (this.latestData != null && this.latestData.length > 0) {
+      if (this.debug) { this.log("Configure Accessory " + accessory.displayName); }
       const stations = platform.latestData
         .filter((station) => accessory.UUID === Bloomsky.UUIDGen.generate(station.DeviceID));
 
@@ -97,33 +125,43 @@ export default class Bloomsky {
         this.updateAccessory(stations[0]);
       }
     } else {
+      if (this.debug) { this.log("Can't Configure Accessory " + accessory.displayName); }
       accessory.reachable = false;
     }
-
-    this.accessories.push(accessory);
   }
 
   // add accessory dynamically from outside event
   public addAccessory(station: IStation) {
-    if (this.debug) { this.log("Add Accessory: " + station.DeviceID); }
-    const platform = this;
-    const uuid = Bloomsky.UUIDGen.generate(station.DeviceID);
-    const filename = station.DeviceID + ".jpg";
 
-    const newAccessory = new Bloomsky.Accessory(station.DeviceName, uuid, Bloomsky.Hap.Accessory.Categories.CAMERA);
-    newAccessory.configureCameraSource(
-      new FFMPEG(Bloomsky.UUIDGen, Bloomsky.Service, Bloomsky.Hap.StreamController, {
-        name: station.DeviceName,
-        videoConfig: {
-          debug : this.debug,
-          maxHeight: 640,
-          maxStreams: 2,
-          maxWidth: 640,
-          source: "-loop 1 -i " + filename,
-          stillImageSource: "-loop 1 -i " + filename,
-          vcodec : platform.vcodec,
-        },
-    }, this.log, "ffmpeg"));
+    if (this.debug) { this.log("Add Accessory: " + station.DeviceID); }
+
+    const uuid = Bloomsky.UUIDGen.generate(station.DeviceID);
+    const newAccessory = new Bloomsky.Accessory(station.DeviceName, uuid, hap.Accessory.Categories.CAMERA);
+    const cameraSource = this.getFfmpegForStationWithUuid(uuid);
+    const countBefore = newAccessory.services.length;
+
+    newAccessory.configureCameraSource(cameraSource);
+
+    if (cameraSource.services.length === 0) {
+      throw Error ("Camera Control came without services...");
+    } else {
+      for (const service of newAccessory.services) {
+        if (this.debug) { this.log(service.UUID + (service.subtype !== undefined ? "." + service.subtype : "")); }
+      }
+    }
+
+    if (newAccessory.services.length <= countBefore
+      || newAccessory.cameraSource !== cameraSource
+      || newAccessory.services.length < cameraSource.services.length
+      ) {
+      throw Error ("Camera Control Service Registration failed... +" + (cameraSource.services.length - countBefore));
+    } else {
+      if (this.debug) {
+        this.log("Registered " +
+        (cameraSource.services.length - countBefore) +
+        " Camera Control Services");
+      }
+    }
 
     newAccessory.addService(Bloomsky.Service.TemperatureSensor, "Temperature")
     .getCharacteristic(Bloomsky.Characteristic.CurrentTemperature).updateValue(station.Data.Temperature);
@@ -165,16 +203,11 @@ export default class Bloomsky {
     informationService.getCharacteristic(Bloomsky.Characteristic.FirmwareRevision).updateValue(station.Data.DeviceType);
 
     this.accessories.push(newAccessory);
-    this.api.registerPlatformAccessories("homebridge-bloomsky", "Bloomsky", this.accessories);
-
-    const file = fs.createWriteStream(filename);
-    file.on("finish", function() {
-      file.close();
-    });
-    const request = http.get(station.Data.ImageURL, function(response) {
-      response.pipe(file);
-      if (platform.debug) { platform.log("temporary file written"); }
-    });
+    if (this.api !== undefined ) {
+      this.api.registerPlatformAccessories("homebridge-bloomsky", "Bloomsky", this.accessories);
+    } else {
+      throw TypeError("this.api UNDEFINED!!!");
+    }
   }
 
   // add accessory dynamically from outside event
@@ -182,10 +215,9 @@ export default class Bloomsky {
     if (this.debug) { this.log("Update Accessory"); }
 
     const platform = this;
-    const filename = station.DeviceID + ".jpg";
     const stationUuid = Bloomsky.UUIDGen.generate(station.DeviceID);
     const accessory = platform.accessories
-    .filter((anyAccessory) => anyAccessory.UUID === stationUuid)[0];
+    .filter((anyAccessory) => anyAccessory.UUID === stationUuid)[0] as PlatformAccessory;
 
     accessory.getService(Bloomsky.Service.TemperatureSensor)
     .getCharacteristic(Bloomsky.Characteristic.CurrentTemperature).updateValue(station.Data.Temperature);
@@ -222,64 +254,94 @@ export default class Bloomsky {
         batteryService.getCharacteristic(Bloomsky.Characteristic.StatusLowBattery).updateValue(batteryLevel < 20);
     }
 
-    const file = fs.createWriteStream(filename);
+    const file = fs.createWriteStream(this.temporaryFilenameForStationUuid(accessory.UUID));
     file.on("finish", function() {
       file.close();
       if (platform.debug) { platform.log("temporary file updated..."); }
     });
     const request = http.get(station.Data.ImageURL, function(response) {
       response.pipe(file);
-      if (platform.debug) { platform.log("temporary file updating..."); }
+      platform.log("temporary file written");
     });
   }
 
   // remove accessory dynamically from outside event
   public removeAccessory() {
-    const platform = this;
-    if (platform.debug) { platform.log("Remove Accessory"); }
-    platform.api.unregisterPlatformAccessories("homebridge-bloomsky", "Bloomsky", platform.accessories);
+    if (this.debug) { this.log("Remove Accessory"); }
 
-    platform.accessories = [] as IAccessory[];
+    if (this.api !== undefined) {
+      this.api.unregisterPlatformAccessories("homebridge-bloomsky", "Bloomsky", this.accessories);
+    }
+    this.accessories = [] as PlatformAccessory[];
   }
 
-  private updateData() {
+  public temporaryFilenameForStationUuid(uuid: string): string {
+    return uuid + ".jpg";
+  }
+
+  public getFfmpegForStationWithUuid(uuid: string): FFMPEG {
+    const filename = this.temporaryFilenameForStationUuid(uuid);
+
+    const ffmpeg = new FFMPEG(Bloomsky.UUIDGen, Bloomsky.Hap, {
+      name: uuid,
+      videoConfig: {
+        debug : this.debug,
+        maxHeight: 640,
+        maxStreams: 2,
+        maxWidth: 640,
+        source: "-loop 1 -i " + filename,
+        stillImageSource: "-loop 1 -i " + filename,
+        vcodec : this.vcodec,
+      },
+    }, this.log, "ffmpeg", filename);
+
+    return ffmpeg;
+  }
+
+  private async updateData() {
     if (this.apiKey !== undefined) {
       const platform = this;
-      const client = new Client();
-      const args = {
-          headers: { Authorization: this.apiKey },
-          parameters: { unit: "intl" },
+
+      const requestOptions: Client.IRequestOptions = {
+        additionalHeaders: { Authorization: this.apiKey } as IHeaders,
       };
+
+      const client = new Client.RestClient("NodeJS");
 
       if (platform.debug) { this.log("updateData"); }
 
-      client.get(this.apiUrl, args, function(data: IStation[], response: any) {
+      const response = await client.get<IStation[]>(this.apiUrl + "?unit=intl", requestOptions).catch((clientError) => {
+        if (platform.debug) { platform.log(clientError); }
+      });
 
-        const error: any = data as any;
-        if (error.detail) {
-          platform.log(error.detail);
-        } else {
-          platform.latestData = data;
-          platform.latestResponse = response;
-
-          if (data != null && data.length > 0) {
-
-            if (platform.accessories.length > 0) {
-              platform.updateExistingAccessories();
-            }
-            platform.registerNewAccessories();
-            platform.updateAccessoriesReachability();
-          }
+      const error: any = response as any;
+      if (error !== undefined && error.detail) {
+        platform.log(error.detail);
+      } else if (response != null) {
+        if (response.result != null) {
+          platform.latestData = response.result;
         }
 
-        platform.timeout = setTimeout(function() { platform.updateData(); }.bind(platform),
-          platform.debug ? 10000 : 150000); // 2.5 minutes, 10 seconds for debugging
-        platform.timeout.unref();
-      });
+        if (response != null && platform.latestData.length > 0) {
+
+          if (platform.accessories.length > 0) {
+            platform.updateExistingAccessories();
+          }
+          platform.registerNewAccessories();
+          platform.updateAccessoriesReachability();
+        }
+      }
+
+      platform.timeout = setTimeout(function() {
+        platform.updateData().catch((clientError) => { platform.log(clientError); });
+      }.bind(platform),
+        platform.debug ? 30000 : 150000); // 2.5 minutes, 10 seconds for debugging
+      platform.timeout.unref();
     }
   }
 
   private stationNeedsToBeRegistered(station: IStation) {
+    if (this.debug) { this.log ("stationNeedsToBeRegistered: " + station); }
     const stationUuid = Bloomsky.UUIDGen.generate(station.DeviceID).valueOf();
     return this.accessories.filter((accessory) => accessory.UUID.valueOf() === stationUuid).length === 0;
   }
@@ -304,10 +366,9 @@ export default class Bloomsky {
     if (this.debug) { this.log("registerNewAccessories"); }
     const platform = this;
 
-    if (this.debug) {
-      this.log(platform.latestData.toString());
+    if (platform.latestData.length === 0) {
+      return;
     }
-
     const unregisteredAccessories = platform.latestData.filter((station) => this.stationNeedsToBeRegistered(station));
 
     for (let i = 0, len = unregisteredAccessories.length; i < len; i++) {
@@ -318,7 +379,7 @@ export default class Bloomsky {
   private updateAccessoriesReachability() {
     if (this.debug) { this.log("Update Reachability"); }
     for (const accessory of this.accessories) {
-      accessory.updateReachability(this.latestData != null);
+      // accessory.updateReachability(this.latestData != null); // Reachability update is no longer being supported
       accessory.reachable = this.latestData != null;
     }
   }

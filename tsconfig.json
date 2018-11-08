@@ -1,11 +1,14 @@
 {
   "compilerOptions": {
-    "declaration": true,
+    "declaration": true, // incompatible with --allowJs
     "outDir": "./lib",
     "strict": true,
     "noImplicitAny": false,
-    "target": "ES5"
+    "target": "ES5",
+    "lib": [ "es2015" ],
+    "baseUrl": ".",
+    "allowJs": false
   },
   "include": ["src"],
-  "exclude": ["node_modules", "src/test", "test"]
+  "exclude": ["node_modules", "src/test", "test"],
 }
