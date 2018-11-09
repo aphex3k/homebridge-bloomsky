@@ -45,7 +45,7 @@
     "typed-rest-client": "^1.0.9"
   },
   "engines": {
-    "node": ">=6",
+    "node": ">=6.2.2",
     "homebridge": ">=0.4.42"
   }
 }
