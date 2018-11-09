@@ -86,7 +86,12 @@ export default class Bloomsky {
 
     const platform = this;
     const ffmpeg = this.getFfmpegForStationWithUuid(accessory.UUID);
-    accessory.cameraSource = ffmpeg;
+
+    try {
+      accessory.configureCameraSource(ffmpeg);
+    } catch {
+      accessory.cameraSource = ffmpeg;
+    }
 
     for (const index in ffmpeg.services) {
       if (ffmpeg.hasOwnProperty(index)) {
@@ -297,10 +302,9 @@ export default class Bloomsky {
       videoConfig: {
         debug : this.debug,
         maxHeight: 640,
-        maxStreams: 2,
+        maxStreams: 1,
         maxWidth: 640,
         source: "-loop 1 -i " + filename,
-        stillImageSource: "-loop 1 -i " + filename,
         vcodec : this.vcodec,
       },
     }, this.log, "ffmpeg", filename);

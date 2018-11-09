@@ -3,6 +3,7 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import "hap-nodejs";
 import * as ip from "ip";
+import * as sharp from "sharp";
 import { AddressResponse } from "./AddressResponse";
 import { AudioResponse } from "./AudioResponse";
 import { SessionInfo } from "./Session";
@@ -145,7 +146,11 @@ export default class FFMPEG implements HAPNodeJS.CameraSource {
     if (this.debug) { this.log("Delivering snapshot at path: " + path); }
 
     const snapshot = fs.readFileSync(path);
-    callback(undefined, snapshot);
+    sharp(snapshot)
+    .resize(request.width, request.height)
+    .toBuffer()
+    .then((data) => callback(undefined, data))
+    .catch((error) => callback(error, undefined));
   }
 
   public prepareStream(request: StreamRequest, callback: (response: StreamResponse) => void) {
@@ -171,6 +176,8 @@ export default class FFMPEG implements HAPNodeJS.CameraSource {
         const ssrcSource = crypto.randomBytes(4);
         ssrcSource[0] = 0;
         const ssrc = ssrcSource.readInt32BE(0, true);
+
+        this.fps = videoInfo.fps || this.fps;
 
         const videoResp: VideoResponse = {
             fps: videoInfo.fps,
@@ -271,10 +278,10 @@ export default class FFMPEG implements HAPNodeJS.CameraSource {
             const ffmpegCommand =
             "-threads 0 -an -re -r 1" +
             " " + this.ffmpegSource +
-            " -vf fps=1" +
+            " -vf fps=" + fps +
             " -map 0:0" +
             " -f mp4 -vcodec " + vcodec +
-            " -preset fast" +
+            " -preset faster" +
             " -pix_fmt yuv420p -an" +
             " -r " + fps +
             " -g " + (fps * 2) +
