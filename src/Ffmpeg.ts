@@ -1,9 +1,9 @@
 import { spawn } from "child_process";
 import * as crypto from "crypto";
-import * as fs from "fs";
-import "hap-nodejs";
+import hapnodejs = require("hap-nodejs");
 import * as ip from "ip";
-import * as sharp from "sharp";
+import Jimp = require("jimp");
+import optional = require("optional");
 import { AddressResponse } from "./AddressResponse";
 import { AudioResponse } from "./AudioResponse";
 import { SessionInfo } from "./Session";
@@ -14,7 +14,6 @@ import { StreamResponse } from "./StreamResponse";
 import { VideoResponse } from "./VideoResponse";
 
 export default class FFMPEG implements HAPNodeJS.CameraSource {
-
   public streamController: any;
   public streamControllers: StreamController[] = [];
   public cameraControllers: any[] = [];
@@ -33,8 +32,8 @@ export default class FFMPEG implements HAPNodeJS.CameraSource {
   private debug: boolean;
   private ffmpegSource: string;
   private ffmpegImageSource: string;
-
   private stillImageFilename: string;
+  private sharp: any;
 
   constructor(
       uuidfunc: HAPNodeJS.uuid,
@@ -50,6 +49,8 @@ export default class FFMPEG implements HAPNodeJS.CameraSource {
     if (hap.StreamController === undefined) { throw Error("StreamController undefined"); }
 
     if (cameraConfig.videoConfig.debug) { log("FFMPEG constructor"); }
+
+    this.sharp = optional("sharp");
 
     this.uuid = uuidfunc;
     this.service = hap.Service;
@@ -145,12 +146,35 @@ export default class FFMPEG implements HAPNodeJS.CameraSource {
 
     if (this.debug) { this.log("Delivering snapshot at path: " + path); }
 
-    const snapshot = fs.readFileSync(path);
-    sharp(snapshot)
-    .resize(request.width, request.height)
-    .toBuffer()
-    .then((data) => callback(undefined, data))
-    .catch((error) => callback(error, undefined));
+    if (this.sharp == null) {
+        if (this.debug) { this.log("... using Jimp"); }
+        Jimp.read(path)
+        .then((image) => {
+            image
+            .resize(request.width, Jimp.AUTO)
+            .crop(0, (image.bitmap.height - request.height) / 2, request.width, request.height)
+            .quality(90)
+            .getBuffer(Jimp.MIME_JPEG, (error, buffer) => {
+                if (error !== null) {
+                    if (this.debug) { this.log("Error getting buffer for snapshot: " + error); }
+                    callback(error, undefined);
+                } else {
+                    callback(undefined, buffer);
+                }
+            });
+        })
+        .catch((error) => {
+            if (this.debug) { this.log("Error reading snapshot at path: " + error); }
+            callback(error, undefined);
+        });
+    } else {
+        if (this.debug) { this.log("... using Sharp"); }
+        this.sharp(path)
+        .resize(request.width, request.height)
+        .toBuffer()
+        .then((data) => callback(undefined, data))
+        .catch((error) => callback(error, undefined));
+    }
   }
 
   public prepareStream(request: StreamRequest, callback: (response: StreamResponse) => void) {
