@@ -1,4 +1,3 @@
-import "hap-nodejs";
 import { SessionInfo } from "./Session";
 import { SnapshotRequest } from "./SnapshotRequest";
 import { StreamController } from "./StreamController";
@@ -23,6 +22,7 @@ export default class FFMPEG implements HAPNodeJS.CameraSource {
     private ffmpegSource;
     private ffmpegImageSource;
     private stillImageFilename;
+    private sharp;
     constructor(uuidfunc: HAPNodeJS.uuid, hap: any, cameraConfig: any, log: (text: string) => void, videoProcessor: string, stillImageFilename: string);
     handleCloseConnection(connectionID: any): void;
     handleSnapshotRequest(request: SnapshotRequest, callback: (error: any, Buffer: any) => any): void;

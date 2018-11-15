@@ -25,6 +25,7 @@ If you have a newer version, you can help me out with the support.
 1. Install this plugin using: `npm install -g homebridge-bloomsky`
 1. Edit `config.json` and add the platform.
 1. Run/Restart Homebridge
+1. _Optionally_ `npm install -g sharp` on modern platforms for improved performance when generating snapshot images
 
 ### Configuration Example
 

@@ -1,6 +1,6 @@
 {
   "name": "homebridge-bloomsky",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "Homebridge plugin for Bloomsky weather stations",
   "main": "index.js",
   "devDependencies": {
@@ -40,12 +40,16 @@
     "child_process": "^1.0.2",
     "hap-nodejs": "^0.4.47",
     "ip": "^1.1.5",
-    "sharp": "^0.21.0",
+    "jimp": "^0.5.6",
+    "optional": "^0.1.4",
     "tern": "^0.22.3",
     "typed-rest-client": "^1.0.9"
   },
   "engines": {
     "node": ">=6.2.2",
     "homebridge": ">=0.4.42"
+  },
+  "optionalDependencies": {
+    "sharp": "^0.21.0"
   }
 }
