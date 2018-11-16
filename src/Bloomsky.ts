@@ -1,5 +1,4 @@
 import * as fs from "fs";
-import * as hap from "hap-nodejs";
 import * as http from "http";
 import * as Client from "typed-rest-client";
 import { IHeaders } from "typed-rest-client/Interfaces";
@@ -135,7 +134,7 @@ export default class Bloomsky {
     if (this.debug) { this.log("Add Accessory: " + station.DeviceID); }
 
     const uuid = Bloomsky.UUIDGen.generate(station.DeviceID);
-    const newAccessory = new Bloomsky.Accessory(station.DeviceName, uuid, hap.Accessory.Categories.CAMERA);
+    const newAccessory = new Bloomsky.Accessory(station.DeviceName, uuid, Bloomsky.Accessory.Categories.CAMERA);
     const cameraSource = this.getFfmpegForStationWithUuid(uuid);
     const countBefore = newAccessory.services.length;
 
