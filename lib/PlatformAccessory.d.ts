@@ -13,11 +13,11 @@ declare interface PlatformAccessory extends HAPNodeJS.Accessory {
     Categories: typeof HAPNodeJS.Accessory.Categories;
     new (displayName: string, category: string): PlatformAccessory;
     new (displayName: string, uuid: string, subtype: number): PlatformAccessory;
-    addService(service: HAPNodeJS.Service | Function): HAPNodeJS.Service;
-    addService(service: HAPNodeJS.Service, displayName: string): HAPNodeJS.Service;
+    addService(service: HAPNodeJS.Service | Function | HAPNodeJS.PredefinedService): HAPNodeJS.Service;
+    addService(service: HAPNodeJS.Service | HAPNodeJS.PredefinedService, displayName: string): HAPNodeJS.Service;
     removeService(service: HAPNodeJS.Service): HAPNodeJS.Service;
     removeService(service: HAPNodeJS.Service, displayName: string): HAPNodeJS.Service;
-    getService(service: HAPNodeJS.Service): HAPNodeJS.Service;
+    getService(service: HAPNodeJS.Service | HAPNodeJS.PredefinedService): HAPNodeJS.Service;
     getService(name: string): HAPNodeJS.Service;
     updateReachability(reachable: boolean): void;
     addBridgedAccessory(accessory: HAPNodeJS.Accessory, deferUpdate: boolean): HAPNodeJS.Accessory;

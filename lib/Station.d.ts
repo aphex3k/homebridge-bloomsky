@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { URL } from "url";
 export declare interface IStation {
     DeviceID: string;

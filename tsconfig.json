@@ -5,10 +5,10 @@
     "strict": true,
     "noImplicitAny": false,
     "target": "ES5",
-    "lib": [ "es2017" ],
+    "lib": ["es2017"],
     "baseUrl": ".",
     "allowJs": false
   },
   "include": ["src"],
-  "exclude": ["node_modules", "src/test", "test"],
+  "exclude": ["node_modules", "src/test", "test"]
 }

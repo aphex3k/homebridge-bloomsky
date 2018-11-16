@@ -1,4 +1,3 @@
-/// <reference types="node" />
 declare class SessionInfo {
     address: any;
     video_port: any;

@@ -1,8 +1,7 @@
-/// <reference types="node" />
+import API from "./homebridge";
 import { FFMPEG } from "./Ffmpeg";
-import { API } from "./homebridge";
-import { PlatformAccessory } from "./PlatformAccessory";
 import { IStation } from "./Station";
+import { PlatformAccessory } from "./PlatformAccessory";
 export { Bloomsky };
 export default class Bloomsky {
     static Accessory: PlatformAccessory;
