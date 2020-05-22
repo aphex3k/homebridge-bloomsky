@@ -1,0 +1,16 @@
+{
+  "pluginAlias": "Homebridge-Bloomsky",
+  "pluginType": "platform",
+  "singular": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "required": true,
+        "default": "Homebridge Bloomsky Platform"
+      }
+    }
+  }
+}

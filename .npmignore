@@ -1,5 +1,6 @@
 local-only/
 *.jpg
+*.jpeg
 package-lock.json
 .git/
 
@@ -34,3 +35,11 @@ tslint.json
 npm-debug.log
 snapshot-error.txt
 persist/
+
+src/
+testing-config/
+*.code-workspace
+.eslintrc
+.jshintrc
+.travis.yml
+.eslintignore
