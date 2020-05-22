@@ -1,6 +1,6 @@
 # Bloomsky Plugin for Homebridge
 
-<img src="https://github.com/aphex3k/homebridge-bloomsky/raw/master/preview.jpeg" align="right" alt="homebridge-bloomsky" />
+<img src="https://github.com/aphex3k/homebridge-bloomsky/raw/master/preview.jpg" align="right" alt="homebridge-bloomsky" />
 
 This plugin for [Homebridge](https://github.com/nfarina/homebridge) will add
 your personal Bloomsky weather station to HomeKit. You can shop Bloomsky at [Amazon](https://amzn.to/2PHZc1j) for example.
