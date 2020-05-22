@@ -1,66 +1,83 @@
-import * as hap from "hap-nodejs";
+import { Bloomsky } from "./platform";
+import { PlatformAccessory } from "homebridge";
+import { Station } from "./Station";
 
-import { EventEmitter } from "events";
+/**
+ * Platform Accessory
+ * An instance of this class is created for each accessory your platform registers
+ * Each accessory may expose multiple services of different service types.
+ */
+export class BloomskyPlatformAccessory {
+  constructor(
+    private readonly platform: Bloomsky,
+    private readonly accessory: PlatformAccessory,
+    station: Station
+  ) {
+    // set accessory information
+    this.accessory
+      .getService(this.platform.Service.AccessoryInformation)!
+      .setCharacteristic(this.platform.Characteristic.Manufacturer, "Bloomsky")
+      .setCharacteristic(
+        this.platform.Characteristic.Model,
+        station.Data.DeviceType
+      )
+      .setCharacteristic(
+        this.platform.Characteristic.SerialNumber,
+        station.DeviceID
+      )
+      .setCharacteristic(this.platform.Characteristic.Name, station.DeviceName);
 
-// tslint:disable-next-line:interface-name
-declare interface PlatformAccessory extends HAPNodeJS.Accessory {
-  displayName: string;
-  username: string;
-  pincode: string;
-  UUID: string;
-  aid: string;
-  bridged: boolean;
-  bridgedAccessories: HAPNodeJS.Accessory[];
-  reachable: boolean;
-  category: HAPNodeJS.Accessory.Categories;
-  services: HAPNodeJS.Service[];
-  cameraSource: HAPNodeJS.CameraSource;
-  Categories: typeof HAPNodeJS.Accessory.Categories;
+    // I only have a Sky 1 model so I can only make a guess about the battery level
+    // for this specific model.
+    if (station.Data.DeviceType === "SKY1") {
+      // clamp battery level between 0 and 100
+      const batteryLevel = Math.max(
+        0,
+        Math.min(100, (100 / 2600) * station.Data.Voltage)
+      );
 
-  // tslint:disable-next-line:no-misused-new
-  new (displayName: string, category: string): PlatformAccessory;
-  // tslint:disable-next-line:unified-signatures
-  new (displayName: string, uuid: string, subtype: number): PlatformAccessory;
-  // tslint:disable-next-line:ban-types
-  addService(
-    service: HAPNodeJS.Service | Function | HAPNodeJS.PredefinedService
-  ): HAPNodeJS.Service;
-  addService(
-    service: HAPNodeJS.Service | HAPNodeJS.PredefinedService,
-    displayName: string
-  ): HAPNodeJS.Service;
-  // tslint:disable-next-line:unified-signatures
-  // addService(category: HAPNodeJS.Accessory.Categories, displayName: string): HAPNodeJS.Service;
-  removeService(service: HAPNodeJS.Service): HAPNodeJS.Service;
-  // tslint:disable-next-line:unified-signatures
-  removeService(
-    service: HAPNodeJS.Service,
-    displayName: string
-  ): HAPNodeJS.Service;
-  getService(
-    service: HAPNodeJS.Service | HAPNodeJS.PredefinedService
-  ): HAPNodeJS.Service;
-  // tslint:disable-next-line:unified-signatures
-  getService(name: string): HAPNodeJS.Service;
-  updateReachability(reachable: boolean): void;
-  addBridgedAccessory(
-    accessory: HAPNodeJS.Accessory,
-    deferUpdate: boolean
-  ): HAPNodeJS.Accessory;
-  addBridgedAccessories(accessories: HAPNodeJS.Accessory[]): void;
-  removeBridgedAccessory(
-    accessory: HAPNodeJS.Accessory,
-    deferUpdate: boolean
-  ): void;
-  removeBridgedAccessories(accessories: HAPNodeJS.Accessory[]): void;
-  getCharacteristicByIID(iid: string): HAPNodeJS.Characteristic;
-  getBridgedAccessoryByAID(aid: string): HAPNodeJS.Accessory;
-  findCharacteristic(aid: string, iid: string): HAPNodeJS.Accessory;
-  configureCameraSource(cameraSource: HAPNodeJS.CameraSource): void;
-  toHAP(opt: any): JSON;
-  publish(info: HAPNodeJS.PublishInfo, allowInsecureRequest: boolean): void;
-  destroy(): void;
-  setupURI(): string;
+      const batteryService =
+        this.accessory.getService(this.platform.Service.BatteryService) ||
+        this.accessory.addService(this.platform.Service.BatteryService);
+
+      batteryService
+        .getCharacteristic(this.platform.Characteristic.BatteryLevel)
+        .updateValue(batteryLevel);
+      batteryService
+        .getCharacteristic(this.platform.Characteristic.ChargingState)
+        .updateValue(2);
+      batteryService
+        .getCharacteristic(this.platform.Characteristic.StatusLowBattery)
+        .updateValue(batteryLevel < 20);
+      batteryService.setCharacteristic(
+        this.platform.Characteristic.Name,
+        station.DeviceName
+      );
+    }
+
+    this.accessory
+      .addService(this.platform.Service.TemperatureSensor)
+      .getCharacteristic(this.platform.Characteristic.CurrentTemperature)
+      .updateValue(station.Data.Temperature);
+
+    this.accessory
+      .addService(this.platform.Service.LightSensor, "Luminance")
+      .getCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel)
+      .updateValue(station.Data.Luminance);
+
+    this.accessory
+      .addService(this.platform.Service.HumiditySensor, "Humidity")
+      .getCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity)
+      .updateValue(station.Data.Humidity);
+
+    this.accessory
+      .addService(this.platform.Service.MotionSensor, "Rain")
+      .getCharacteristic(this.platform.Characteristic.MotionDetected)
+      .updateValue(station.Data.Rain);
+
+    this.accessory
+      .addService(this.platform.Service.OccupancySensor, "Night")
+      .getCharacteristic(this.platform.Characteristic.OccupancyDetected)
+      .updateValue(station.Data.Night);
+  }
 }
-
-export { PlatformAccessory };

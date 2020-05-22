@@ -1,55 +1,53 @@
 {
+  "displayName": "Homebridge Bloomsky",
   "name": "homebridge-bloomsky",
-  "version": "1.2",
+  "version": "1.2.0-alpha.2",
   "description": "Homebridge plugin for Bloomsky weather stations",
-  "main": "index.js",
-  "devDependencies": {
-    "@types/chai": "^4.1.6",
-    "@types/debug": "0.0.31",
-    "@types/ip": "0.0.31",
-    "@types/mocha": "^5.2.5",
-    "@types/node": "^10.12.0",
-    "@types/sharp": "^0.21.0",
-    "async-wait-until": "^1.2.4",
-    "chai": "^4.2.0",
-    "hap-nodejs": "^0.4.47",
-    "homebridge": ">=0.4.42",
-    "mocha": "^7.1.2",
-    "mocha-logger": "^1.0.6",
-    "tern": "^0.22.3",
-    "ts-node": "^7.0.1",
-    "tslint": "^5.11.0",
-    "typescript": "^3.1.3"
-  },
-  "scripts": {
-    "test": "mocha -r ts-node/register **/*.spec.ts",
-    "standalone": "node standalone.js"
-  },
+  "author": "Michael Henke",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/aphex3k/homebridge-bloomsky.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aphex3k/homebridge-bloomsky/issues"
+  },
+  "homepage": "https://github.com/aphex3k/homebridge-bloomsky#readme",
+  "engines": {
+    "node": ">=10.17.0",
+    "homebridge": ">0.4.53",
+    "npm": ">=6.4.1"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "lint": "eslint src/**.ts",
+    "watch": "npm run build && npm link && nodemon",
+    "build": "rimraf ./dist && tsc --build tsconfig.json",
+    "prepublishOnly": "npm run lint && npm run build"
   },
   "keywords": [
     "homebridge-plugin",
     "bloomsky"
   ],
-  "author": "Michael Henke",
-  "license": "Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/aphex3k/homebridge-bloomsky/issues"
-  },
-  "homepage": "https://github.com/aphex3k/homebridge-bloomsky#readme",
   "dependencies": {
     "child_process": "^1.0.2",
     "ip": "^1.1.5",
-    "jimp": "^0.5.6",
     "optional": "^0.1.4",
     "typed-rest-client": "^1.0.9"
   },
-  "engines": {
-    "node": ">=6.2.2",
-    "homebridge": ">=0.4.42",
-    "npm": ">=6.4.1"
-  },
-  "optionalDependencies": {}
+  "devDependencies": {
+    "@types/chai": "^4.1.6",
+    "@types/debug": "0.0.31",
+    "@types/ip": "0.0.31",
+    "@types/node": "^14.0.1",
+    "@typescript-eslint/eslint-plugin": "^2.34.0",
+    "@typescript-eslint/parser": "^2.34.0",
+    "async-wait-until": "^1.2.4",
+    "eslint": "^6.8.0",
+    "homebridge": "^1.1.0",
+    "nodemon": "^2.0.4",
+    "rimraf": "^3.0.2",
+    "ts-node": "^8.10.1",
+    "typescript": "^3.9.2"
+  }
 }

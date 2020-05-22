@@ -39,3 +39,7 @@ persist/
 src/
 testing-config/
 *.code-workspace
+.eslintrc
+.jshintrc
+.travis.yml
+.eslintignore

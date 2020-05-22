@@ -1,22 +1,26 @@
 language: node_js
+
 node_js:
-  - 6.14.4
-  - 8.11.1
-  - 8.12.0
-  - 10.13.0
-  - 11.1.0
-before_install:
-- curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
-- echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-- sudo apt-get update && sudo apt-get install yarn
-- yarn global add jshint tslint typescript homebridge eslint
-- homebridge --version
+  - node
+  - 10
+  - 11
+
+env:
+  - workerCount=3
+
+matrix:
+  fast_finish: true
+
+install:
+  - npm install
+
+cache:
+  directories:
+    - node_modules
+
+git:
+  depth: 1
+
 script:
-- tslint -c ./tslint.json --project .
-- tsc
-- eslint -c .eslintrc.json *.js
-- jshint -c .jshintrc *.js
-- npm --verbose test
-- node --version | grep -v v6.*.* && npm --dry-run publish || echo Skipping publish dry-run for node 6.x
-- DEBUG=* timeout -k 20s -s SIGINT 15s homebridge -Q -P ./ -U ./testing-config ; test $? == 124
-- timeout -k 20s -s SIGINT 15s node standalone.js ; test $? == 124
+  - npm run lint
+  # - npm run build
