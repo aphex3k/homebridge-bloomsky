@@ -22,7 +22,7 @@
   "scripts": {
     "lint": "eslint src/**.ts",
     "watch": "npm run build && npm link && nodemon",
-    "build": "rimraf ./dist && tsc --build tsconfig.json",
+    "build": "rimraf ./dist && node_modules/.bin/tsc --build tsconfig.json",
     "prepublishOnly": "npm run lint && npm run build"
   },
   "keywords": [
